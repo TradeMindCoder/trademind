@@ -1,64 +1,60 @@
-// api/subscribe.js
-// Place this file in your project at: trademind/api/subscribe.js
-// Vercel automatically turns files in the /api folder into serverless functions.
-// This function receives an email from the landing page form and adds it to Mailchimp.
+// TraderPoise — Mailchimp Waitlist Subscribe API
+// Deploy this in your /api folder on Vercel
 
 export default async function handler(req, res) {
-  // Only allow POST requests
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { email } = req.body;
+  const { email, name, trader_type } = req.body;
 
-  // Basic validation
-  if (!email || !email.includes("@")) {
-    return res.status(400).json({ error: "Invalid email address" });
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
   }
 
-  // These come from your Vercel Environment Variables
-  const API_KEY = process.env.MAILCHIMP_API_KEY;
-  const LIST_ID = process.env.MAILCHIMP_LIST_ID;
+  const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
+  const MAILCHIMP_LIST_ID = process.env.MAILCHIMP_LIST_ID;
+  const MAILCHIMP_DC = process.env.MAILCHIMP_DC; // e.g. "us21"
 
-  if (!API_KEY || !LIST_ID) {
-    console.error("Missing Mailchimp environment variables");
-    return res.status(500).json({ error: "Server configuration error" });
+  if (!MAILCHIMP_API_KEY || !MAILCHIMP_LIST_ID || !MAILCHIMP_DC) {
+    return res.status(500).json({ error: "Mailchimp not configured" });
   }
-
-  // Mailchimp API server prefix is the last part of the API key (e.g. "us21")
-  const DC = API_KEY.split("-").pop();
-  const url = `https://${DC}.api.mailchimp.com/3.0/lists/${LIST_ID}/members`;
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`any:${API_KEY}`).toString("base64")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email_address: email.toLowerCase().trim(),
-        status: "subscribed",
-        tags: ["TradeMind Waitlist"],
-      }),
-    });
+    const response = await fetch(
+      `https://${MAILCHIMP_DC}.api.mailchimp.com/3.0/lists/${MAILCHIMP_LIST_ID}/members`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`anystring:${MAILCHIMP_API_KEY}`).toString("base64")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email_address: email,
+          status: "subscribed",
+          merge_fields: {
+            FNAME: name || "",
+            TRADER: trader_type || "forex",
+            BRAND: "TraderPoise",
+          },
+          tags: ["traderpoise-waitlist", trader_type || "forex"],
+        }),
+      }
+    );
 
     const data = await response.json();
 
-    // Handle already-subscribed gracefully (not an error for us)
-    if (response.status === 400 && data.title === "Member Exists") {
-      return res.status(200).json({ ok: true, message: "Already subscribed" });
+    if (response.status === 200 || response.status === 201) {
+      return res.status(200).json({ success: true, message: "Successfully joined TraderPoise waitlist!" });
     }
 
-    if (!response.ok) {
-      console.error("Mailchimp error:", data);
-      return res.status(400).json({ error: data.detail || "Subscription failed", title: data.title });
+    if (data.title === "Member Exists") {
+      return res.status(200).json({ success: true, message: "You're already on the waitlist!" });
     }
 
-    return res.status(200).json({ ok: true, message: "Subscribed successfully" });
-
+    throw new Error(data.detail || "Mailchimp error");
   } catch (error) {
-    console.error("Subscribe error:", error);
-    return res.status(500).json({ error: "Server error" });
+    console.error("TraderPoise waitlist error:", error);
+    return res.status(500).json({ error: error.message || "Failed to join waitlist" });
   }
 }
