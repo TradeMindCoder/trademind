@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://qghbdzmefvcgmwacswuy.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnaGJkem1lZnZjZ213YWNzd3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2ODMxNjgsImV4cCI6MjA5NjI1OTE2OH0.5ktqPt98j9sH6YLBlYHu6pJPbLui8Ygxu95As1ph7RA";
 
 // ============================================================
 // HOW TO CHANGE THE BRAND NAME:
